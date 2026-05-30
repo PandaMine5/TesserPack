@@ -21,13 +21,19 @@ jobs:
         with:
           fetch-depth: 0
 
-      # ---------------- GO ----------------
+      # ---------------- SETUP GO ----------------
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
           go-version: "1.25"
 
-      # ---------------- ENV FIX (IMPORTANT) ----------------
+      # ---------------- INSTALL VIPS (FIX) ----------------
+      - name: Install libvips
+        shell: pwsh
+        run: |
+          choco install vips -y
+
+      # ---------------- ENV FIX ----------------
       - name: Enable Go experiment (jsonv2)
         shell: pwsh
         run: |
