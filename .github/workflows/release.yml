@@ -21,11 +21,7 @@ jobs:
         with:
           go-version: "1.25"
 
-      - name: Install libvips
-        shell: pwsh
-        run: |
-          vcpkg install libvips:x64-windows
-          vcpkg integrate install
+      - name: Install libvips   shell: pwsh   run: choco install libvips-cpp -y
 
       - name: Set env
         shell: pwsh
