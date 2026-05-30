@@ -23,7 +23,9 @@ jobs:
 
       - name: Install libvips
         shell: pwsh
-        run: choco install libvips -y
+        run: |
+          vcpkg install libvips:x64-windows
+          vcpkg integrate install
 
       - name: Set env
         shell: pwsh
