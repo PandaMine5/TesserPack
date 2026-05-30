@@ -1,54 +1,42 @@
 name: release
-
 on:
   push:
     tags:
       - "v*"
   workflow_dispatch:
-
 jobs:
   build:
     name: windows
     runs-on: windows-latest
-
     permissions:
       contents: write
-
     steps:
-      # ---------------- CHECKOUT ----------------
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      # ---------------- SETUP GO ----------------
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
           go-version: "1.25"
 
-      # ---------------- INSTALL VIPS (FIX) ----------------
       - name: Install libvips
         shell: pwsh
-        run: |
-          choco install vips -y
+        run: choco install libvips -y
 
-      # ---------------- ENV FIX ----------------
-      - name: Enable Go experiment (jsonv2)
+      - name: Set env
         shell: pwsh
         run: |
           echo "CGO_ENABLED=1" >> $env:GITHUB_ENV
           echo "GOEXPERIMENT=jsonv2" >> $env:GITHUB_ENV
 
-      # ---------------- VERIFY BUILD ----------------
       - name: Build project
         shell: pwsh
         run: |
           go version
-          go env
           go build ./...
 
-      # ---------------- GORELEASER ----------------
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v6
         with:
