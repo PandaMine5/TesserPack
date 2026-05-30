@@ -27,15 +27,20 @@ jobs:
         with:
           go-version: "1.25"
 
-      # ---------------- DEPENDENCIES ----------------
-      - name: Enable CGO
+      # ---------------- ENV FIX (IMPORTANT) ----------------
+      - name: Enable Go experiment (jsonv2)
         shell: pwsh
         run: |
           echo "CGO_ENABLED=1" >> $env:GITHUB_ENV
+          echo "GOEXPERIMENT=jsonv2" >> $env:GITHUB_ENV
 
-      # ---------------- BUILD ----------------
-      - name: Build
-        run: go build ./...
+      # ---------------- VERIFY BUILD ----------------
+      - name: Build project
+        shell: pwsh
+        run: |
+          go version
+          go env
+          go build ./...
 
       # ---------------- GORELEASER ----------------
       - name: Run GoReleaser
@@ -47,3 +52,4 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CGO_ENABLED: 1
+          GOEXPERIMENT: jsonv2
