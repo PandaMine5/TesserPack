@@ -8,13 +8,8 @@ on:
 
 jobs:
   build:
-    name: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu, windows]
-
-    runs-on: ${{ matrix.os }}-latest
+    name: windows
+    runs-on: windows-latest
 
     permissions:
       contents: write
@@ -30,44 +25,20 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.22"
+          go-version: "1.25"
 
-      # ---------------- LINUX DEPENDENCIES ----------------
-      - name: Install dependencies (Linux)
-        if: runner.os == 'Linux'
-        run: |
-          sudo apt update
-          sudo apt install -y libvips-dev pkg-config
-
-      # ---------------- WINDOWS DEPENDENCIES ----------------
-      - name: Install dependencies (Windows)
-        if: runner.os == 'Windows'
+      # ---------------- DEPENDENCIES ----------------
+      - name: Enable CGO
         shell: pwsh
         run: |
           echo "CGO_ENABLED=1" >> $env:GITHUB_ENV
 
       # ---------------- BUILD ----------------
-      - name: Build Go project
-        run: |
-          go version
-          go env
-          go build ./...
+      - name: Build
+        run: go build ./...
 
-      # ---------------- GORELEASER (LINUX) ----------------
-      - name: Run GoReleaser (Linux)
-        if: runner.os == 'Linux'
-        uses: goreleaser/goreleaser-action@v6
-        with:
-          distribution: goreleaser
-          version: latest
-          args: release --config .goreleaser.linux.yaml --clean
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          CGO_ENABLED: 1
-
-      # ---------------- GORELEASER (WINDOWS) ----------------
-      - name: Run GoReleaser (Windows)
-        if: runner.os == 'Windows'
+      # ---------------- GORELEASER ----------------
+      - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v6
         with:
           distribution: goreleaser
