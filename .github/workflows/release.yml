@@ -10,102 +10,69 @@ jobs:
   build:
     name: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
-        os: [windows, ubuntu]
+        os: [ubuntu, windows]
+
     runs-on: ${{ matrix.os }}-latest
 
     permissions:
       contents: write
-      issues: write
 
     steps:
+      # ---------------- CHECKOUT ----------------
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
+      # ---------------- GO ----------------
       - name: Set up Go
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@v5
         with:
           go-version: "1.22"
 
-      # ---------------- LINUX ----------------
-      - name: Install Build Dependencies (Linux)
+      # ---------------- LINUX DEPENDENCIES ----------------
+      - name: Install dependencies (Linux)
         if: runner.os == 'Linux'
         run: |
           sudo apt update
-          sudo apt install -y build-essential meson ninja-build pkg-config \
-            libglib2.0-dev libexpat1-dev libjpeg-turbo8-dev libpng-dev \
-            libwebp-dev libtiff-dev libgif-dev liblcms2-dev liborc-0.4-dev \
-            librsvg2-dev libheif-dev libexif-dev libpoppler-glib-dev \
-            libimagequant-dev
+          sudo apt install -y libvips-dev pkg-config
 
-      - name: Build and install libvips (Linux)
-        if: runner.os == 'Linux'
-        run: |
-          wget https://github.com/libvips/libvips/releases/download/v8.17.1/vips-8.17.1.tar.xz
-          tar -xf vips-8.17.1.tar.xz
-          cd vips-8.17.1
-          meson setup builddir --prefix=/usr/local
-          meson compile -C builddir
-          sudo meson install -C builddir
-          sudo ldconfig
-
-      # ---------------- WINDOWS ----------------
-      - name: Setup MSYS2 (Windows)
-        if: runner.os == 'Windows'
-        uses: msys2/setup-msys2@v2
-        with:
-          update: true
-          install: >
-            mingw-w64-x86_64-pkg-config
-            mingw-w64-x86_64-libvips
-
-      - name: Fetch libvips (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          curl -L -o vips.zip https://github.com/libvips/build-win64-mxe/releases/download/v8.17.1/vips-dev-w64-web-8.17.1.zip
-          Expand-Archive vips.zip -DestinationPath .
-
-      - name: Set libvips env (Windows)
+      # ---------------- WINDOWS DEPENDENCIES ----------------
+      - name: Install dependencies (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
           echo "CGO_ENABLED=1" >> $env:GITHUB_ENV
-          echo "PKG_CONFIG_PATH=${{ github.workspace }}\vips-dev-8.17\lib\pkgconfig" >> $env:GITHUB_ENV
-          echo "CGO_CFLAGS=-I${{ github.workspace }}\vips-dev-8.17\include" >> $env:GITHUB_ENV
-          echo "CGO_LDFLAGS=-L${{ github.workspace }}\vips-dev-8.17\lib" >> $env:GITHUB_ENV
-          echo "GOEXPERIMENT=jsonv2" >> $env:GITHUB_ENV
 
-      - name: Copy DLLs (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
+      # ---------------- BUILD ----------------
+      - name: Build Go project
         run: |
-          Get-ChildItem -Path "${{ github.workspace }}\vips-dev-8.17" -Recurse -Filter "*.dll" |
-          Copy-Item -Destination "${{ github.workspace }}"
+          go version
+          go env
+          go build ./...
 
-      # ---------------- RELEASE ----------------
+      # ---------------- GORELEASER (LINUX) ----------------
       - name: Run GoReleaser (Linux)
         if: runner.os == 'Linux'
         uses: goreleaser/goreleaser-action@v6
         with:
           distribution: goreleaser
           version: latest
-          args: release --config .goreleaser.linux.yaml
+          args: release --config .goreleaser.linux.yaml --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CGO_ENABLED: 1
-          GOEXPERIMENT: jsonv2
 
+      # ---------------- GORELEASER (WINDOWS) ----------------
       - name: Run GoReleaser (Windows)
         if: runner.os == 'Windows'
         uses: goreleaser/goreleaser-action@v6
         with:
           distribution: goreleaser
           version: latest
-          args: release --config .goreleaser.windows.yaml
+          args: release --config .goreleaser.windows.yaml --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CGO_ENABLED: 1
-          GOEXPERIMENT: jsonv2
